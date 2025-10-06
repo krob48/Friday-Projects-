@@ -1,7 +1,7 @@
 """
-Customer Information Form — Tkinter + SQLite (Meets Professor Requirements)
---------------------------------------------------------------------------
-Collects: Name, Birthday, Email, Phone, Address, Preferred Contact (Email/Phone/Mail)
+Customer Information Form — Tkinter + SQLite (Separate First and Last Names)
+----------------------------------------------------------------------------
+Collects: First Name, Last Name, Birthday, Email, Phone, Address, Preferred Contact (Email/Phone/Mail)
 Saves to: customers.db (SQLite) — auto-created next to this .py file
 UI: Simple customer-facing form with Submit (saves & clears) and Clear
 
@@ -21,7 +21,6 @@ DB_FILE = "customers.db"
 # ----------------------------
 # Database helpers
 # ----------------------------
-
 def get_conn():
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
@@ -34,7 +33,8 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS customers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
+                first_name TEXT NOT NULL,
+                last_name TEXT NOT NULL,
                 birthday TEXT,                -- ISO string YYYY-MM-DD
                 email TEXT,
                 phone TEXT,
@@ -46,14 +46,14 @@ def init_db():
         )
 
 
-def insert_customer(name, birthday, email, phone, address, preferred_contact):
+def insert_customer(first_name, last_name, birthday, email, phone, address, preferred_contact):
     with get_conn() as conn:
         conn.execute(
             """
-            INSERT INTO customers(name, birthday, email, phone, address, preferred_contact)
-            VALUES(?,?,?,?,?,?)
+            INSERT INTO customers(first_name, last_name, birthday, email, phone, address, preferred_contact)
+            VALUES(?,?,?,?,?,?,?)
             """,
-            (name, birthday, email, phone, address, preferred_contact),
+            (first_name, last_name, birthday, email, phone, address, preferred_contact),
         )
 
 
@@ -65,9 +65,11 @@ PHONE_RE = re.compile(r"^[0-9+()\-\s]{7,}$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")  # YYYY-MM-DD
 
 
-def validate_fields(name, birthday, email, phone, preferred_contact):
-    if not name.strip():
-        return False, "Name is required."
+def validate_fields(first_name, last_name, birthday, email, phone, preferred_contact):
+    if not first_name.strip():
+        return False, "First name is required."
+    if not last_name.strip():
+        return False, "Last name is required."
     if birthday and not DATE_RE.match(birthday.strip()):
         return False, "Birthday must be YYYY-MM-DD (e.g., 2001-09-30)."
     if email and not EMAIL_RE.match(email.strip()):
@@ -85,11 +87,12 @@ def validate_fields(name, birthday, email, phone, preferred_contact):
 class CustomerApp:
     def __init__(self, root: Tk):
         self.root = root
-        self.root.title("Customer Information (SQLite + Tkinter)")
-        self.root.geometry("780x360")
+        self.root.title("Customer Information Form (SQLite + Tkinter)")
+        self.root.geometry("780x400")
 
         # Variables
-        self.name = StringVar()
+        self.first_name = StringVar()
+        self.last_name = StringVar()
         self.birthday = StringVar()
         self.email = StringVar()
         self.phone = StringVar()
@@ -105,23 +108,26 @@ class CustomerApp:
         form = ttk.LabelFrame(container, text="Enter Your Information", padding=12)
         form.pack(fill="x")
 
-        # Row 1: Name, Birthday
-        ttk.Label(form, text="Name *").grid(row=0, column=0, sticky="w", padx=(0,8), pady=6)
-        ttk.Entry(form, textvariable=self.name, width=32).grid(row=0, column=1, sticky="w")
+        # Row 1: First and Last Name
+        ttk.Label(form, text="First Name *").grid(row=0, column=0, sticky="w", padx=(0,8), pady=6)
+        ttk.Entry(form, textvariable=self.first_name, width=25).grid(row=0, column=1, sticky="w")
 
-        ttk.Label(form, text="Birthday (YYYY-MM-DD)").grid(row=0, column=2, sticky="w", padx=(24,8))
-        ttk.Entry(form, textvariable=self.birthday, width=18).grid(row=0, column=3, sticky="w")
+        ttk.Label(form, text="Last Name *").grid(row=0, column=2, sticky="w", padx=(24,8))
+        ttk.Entry(form, textvariable=self.last_name, width=25).grid(row=0, column=3, sticky="w")
 
-        # Row 2: Email, Phone
-        ttk.Label(form, text="Email").grid(row=1, column=0, sticky="w", padx=(0,8), pady=6)
-        ttk.Entry(form, textvariable=self.email, width=32).grid(row=1, column=1, sticky="w")
+        # Row 2: Birthday and Email
+        ttk.Label(form, text="Birthday (YYYY-MM-DD)").grid(row=1, column=0, sticky="w", padx=(0,8), pady=6)
+        ttk.Entry(form, textvariable=self.birthday, width=25).grid(row=1, column=1, sticky="w")
 
-        ttk.Label(form, text="Phone").grid(row=1, column=2, sticky="w", padx=(24,8))
-        ttk.Entry(form, textvariable=self.phone, width=18).grid(row=1, column=3, sticky="w")
+        ttk.Label(form, text="Email").grid(row=1, column=2, sticky="w", padx=(24,8))
+        ttk.Entry(form, textvariable=self.email, width=25).grid(row=1, column=3, sticky="w")
 
-        # Row 3: Address (full-width)
-        ttk.Label(form, text="Address").grid(row=2, column=0, sticky="w", padx=(0,8), pady=6)
-        ttk.Entry(form, textvariable=self.address, width=68).grid(row=2, column=1, columnspan=3, sticky="we")
+        # Row 3: Phone and Address
+        ttk.Label(form, text="Phone").grid(row=2, column=0, sticky="w", padx=(0,8), pady=6)
+        ttk.Entry(form, textvariable=self.phone, width=25).grid(row=2, column=1, sticky="w")
+
+        ttk.Label(form, text="Address").grid(row=2, column=2, sticky="w", padx=(24,8))
+        ttk.Entry(form, textvariable=self.address, width=25).grid(row=2, column=3, sticky="w")
 
         # Row 4: Preferred Contact
         ttk.Label(form, text="Preferred Contact *").grid(row=3, column=0, sticky="w", padx=(0,8), pady=6)
@@ -129,13 +135,13 @@ class CustomerApp:
         contact_combo["values"] = ("Email", "Phone", "Mail")
         contact_combo.grid(row=3, column=1, sticky="w")
 
-        # Buttons (customer-facing)
+        # Buttons
         btns = ttk.Frame(container)
         btns.pack(fill="x", pady=(12, 0))
         ttk.Button(btns, text="Submit", command=self.submit).pack(side="left")
         ttk.Button(btns, text="Clear", command=self.clear_form).pack(side="left", padx=8)
 
-        # Theme tweak (optional)
+        # Theme tweak
         style = ttk.Style(self.root)
         try:
             style.theme_use("clam")
@@ -144,7 +150,8 @@ class CustomerApp:
 
     # ---------- Actions ----------
     def clear_form(self):
-        self.name.set("")
+        self.first_name.set("")
+        self.last_name.set("")
         self.birthday.set("")
         self.email.set("")
         self.phone.set("")
@@ -152,20 +159,21 @@ class CustomerApp:
         self.preferred_contact.set("Email")
 
     def submit(self):
-        name = self.name.get().strip()
+        first = self.first_name.get().strip()
+        last = self.last_name.get().strip()
         birthday = self.birthday.get().strip()
         email = self.email.get().strip()
         phone = self.phone.get().strip()
         address = self.address.get().strip()
         preferred = self.preferred_contact.get().strip()
 
-        ok, msg = validate_fields(name, birthday, email, phone, preferred)
+        ok, msg = validate_fields(first, last, birthday, email, phone, preferred)
         if not ok:
             messagebox.showerror("Validation", msg)
             return
 
         try:
-            insert_customer(name, birthday or None, email or None, phone or None, address or None, preferred)
+            insert_customer(first, last, birthday or None, email or None, phone or None, address or None, preferred)
         except Exception as e:
             messagebox.showerror("Error", f"Database error: {e}")
             return
@@ -177,7 +185,6 @@ class CustomerApp:
 # ----------------------------
 # Main entry
 # ----------------------------
-
 def main():
     init_db()
     root = Tk()
