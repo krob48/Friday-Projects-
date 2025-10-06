@@ -1,12 +1,9 @@
 """
-Tkinter + SQLite Customer Info Submission App (Meets Project Spec)
-------------------------------------------------------------------
-A single-file Python app that:
-- Creates an SQLite database (`customers.db`) with a `customers` table
-- Collects: Name, Birthday, Email, Phone, Address, Preferred Contact Method (dropdown)
-- "Submit" button saves to DB **and clears the form**
-- Optional table (Treeview) shows submitted entries for confirmation
-- Simple validation for required fields, email and date format (YYYY-MM-DD)
+Customer Information Form — Tkinter + SQLite (Meets Professor Requirements)
+--------------------------------------------------------------------------
+Collects: Name, Birthday, Email, Phone, Address, Preferred Contact (Email/Phone/Mail)
+Saves to: customers.db (SQLite) — auto-created next to this .py file
+UI: Simple customer-facing form with Submit (saves & clears) and Clear
 
 Run:
     python customer_app.py
@@ -38,11 +35,11 @@ def init_db():
             CREATE TABLE IF NOT EXISTS customers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
-                birthday TEXT,                -- store as ISO string YYYY-MM-DD
+                birthday TEXT,                -- ISO string YYYY-MM-DD
                 email TEXT,
                 phone TEXT,
                 address TEXT,
-                preferred_contact TEXT CHECK(preferred_contact in ('Email','Phone','Mail')),
+                preferred_contact TEXT CHECK(preferred_contact IN ('Email','Phone','Mail')),
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
             """
@@ -58,14 +55,6 @@ def insert_customer(name, birthday, email, phone, address, preferred_contact):
             """,
             (name, birthday, email, phone, address, preferred_contact),
         )
-
-
-def fetch_customers():
-    with get_conn() as conn:
-        cur = conn.execute(
-            "SELECT id, name, birthday, email, phone, address, preferred_contact, created_at FROM customers ORDER BY id DESC"
-        )
-        return [dict(row) for row in cur.fetchall()]
 
 
 # ----------------------------
@@ -97,7 +86,7 @@ class CustomerApp:
     def __init__(self, root: Tk):
         self.root = root
         self.root.title("Customer Information (SQLite + Tkinter)")
-        self.root.geometry("860x520")
+        self.root.geometry("780x360")
 
         # Variables
         self.name = StringVar()
@@ -108,7 +97,6 @@ class CustomerApp:
         self.preferred_contact = StringVar(value="Email")
 
         self._build_ui()
-        self.refresh_table()
 
     def _build_ui(self):
         container = ttk.Frame(self.root, padding=12)
@@ -117,72 +105,42 @@ class CustomerApp:
         form = ttk.LabelFrame(container, text="Enter Your Information", padding=12)
         form.pack(fill="x")
 
-        # Row 1
+        # Row 1: Name, Birthday
         ttk.Label(form, text="Name *").grid(row=0, column=0, sticky="w", padx=(0,8), pady=6)
         ttk.Entry(form, textvariable=self.name, width=32).grid(row=0, column=1, sticky="w")
 
         ttk.Label(form, text="Birthday (YYYY-MM-DD)").grid(row=0, column=2, sticky="w", padx=(24,8))
         ttk.Entry(form, textvariable=self.birthday, width=18).grid(row=0, column=3, sticky="w")
 
-        # Row 2
+        # Row 2: Email, Phone
         ttk.Label(form, text="Email").grid(row=1, column=0, sticky="w", padx=(0,8), pady=6)
         ttk.Entry(form, textvariable=self.email, width=32).grid(row=1, column=1, sticky="w")
 
         ttk.Label(form, text="Phone").grid(row=1, column=2, sticky="w", padx=(24,8))
         ttk.Entry(form, textvariable=self.phone, width=18).grid(row=1, column=3, sticky="w")
 
-        # Row 3
+        # Row 3: Address (full-width)
         ttk.Label(form, text="Address").grid(row=2, column=0, sticky="w", padx=(0,8), pady=6)
         ttk.Entry(form, textvariable=self.address, width=68).grid(row=2, column=1, columnspan=3, sticky="we")
 
-        # Row 4 - Preferred contact dropdown
+        # Row 4: Preferred Contact
         ttk.Label(form, text="Preferred Contact *").grid(row=3, column=0, sticky="w", padx=(0,8), pady=6)
         contact_combo = ttk.Combobox(form, textvariable=self.preferred_contact, state="readonly", width=16)
         contact_combo["values"] = ("Email", "Phone", "Mail")
         contact_combo.grid(row=3, column=1, sticky="w")
 
-        # Buttons
+        # Buttons (customer-facing)
         btns = ttk.Frame(container)
-        btns.pack(fill="x", pady=(10, 12))
+        btns.pack(fill="x", pady=(12, 0))
         ttk.Button(btns, text="Submit", command=self.submit).pack(side="left")
         ttk.Button(btns, text="Clear", command=self.clear_form).pack(side="left", padx=8)
 
-        # Table (optional visualization of saved entries)
-        table_frame = ttk.LabelFrame(container, text="Recently Submitted", padding=8)
-        table_frame.pack(fill="both", expand=True)
-
-        columns = ("id", "name", "birthday", "email", "phone", "address", "preferred_contact", "created_at")
-        self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
-        headers = [
-            ("id", "ID", 50),
-            ("name", "Name", 160),
-            ("birthday", "Birthday", 100),
-            ("email", "Email", 170),
-            ("phone", "Phone", 120),
-            ("address", "Address", 220),
-            ("preferred_contact", "Preferred", 100),
-            ("created_at", "Created", 140),
-        ]
-        for col, text, width in headers:
-            self.tree.heading(col, text=text)
-            self.tree.column(col, width=width, anchor="w")
-
-        yscroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
-        xscroll = ttk.Scrollbar(table_frame, orient="horizontal", command=self.tree.xview)
-        self.tree.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
-        self.tree.grid(row=0, column=0, sticky="nsew")
-        yscroll.grid(row=0, column=1, sticky="ns")
-        xscroll.grid(row=1, column=0, sticky="ew")
-        table_frame.rowconfigure(0, weight=1)
-        table_frame.columnconfigure(0, weight=1)
-
-        # Nice theme tweaks
+        # Theme tweak (optional)
         style = ttk.Style(self.root)
         try:
             style.theme_use("clam")
         except Exception:
             pass
-        style.configure("Treeview", rowheight=24)
 
     # ---------- Actions ----------
     def clear_form(self):
@@ -192,19 +150,6 @@ class CustomerApp:
         self.phone.set("")
         self.address.set("")
         self.preferred_contact.set("Email")
-
-    def refresh_table(self):
-        for i in self.tree.get_children():
-            self.tree.delete(i)
-        for r in fetch_customers():
-            self.tree.insert(
-                "",
-                END,
-                values=(
-                    r["id"], r["name"], r.get("birthday",""), r.get("email",""),
-                    r.get("phone",""), r.get("address",""), r.get("preferred_contact",""), r.get("created_at",""),
-                ),
-            )
 
     def submit(self):
         name = self.name.get().strip()
@@ -225,7 +170,6 @@ class CustomerApp:
             messagebox.showerror("Error", f"Database error: {e}")
             return
 
-        self.refresh_table()
         self.clear_form()
         messagebox.showinfo("Success", "Your information was submitted.")
 
